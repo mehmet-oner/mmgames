@@ -7,11 +7,35 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Point = { x: number; y: number };
 type Direction = "up" | "down" | "left" | "right";
-type Status = "idle" | "playing" | "over";
+type Status = "idle" | "playing" | "over" | "quiz";
 
 const BOARD_SIZE = 14;
 const SPEED = 160;
-const EMOJIS = ["🍎", "🍉", "🍇", "🍓", "🥝", "🍍", "🍑", "🥕", "🌶", "🍋"] as const;
+const EXPRESSIONS = [
+  { symbol: "😀", label: "Grinning face" },
+  { symbol: "😎", label: "Cool face" },
+  { symbol: "😢", label: "Crying face" },
+  { symbol: "😡", label: "Angry face" },
+  { symbol: "😱", label: "Screaming face" },
+  { symbol: "🤢", label: "Nauseated face" },
+  { symbol: "😍", label: "Heart eyes" },
+  { symbol: "🤔", label: "Thinking face" },
+  { symbol: "😴", label: "Sleepy face" },
+  { symbol: "😅", label: "Nervous grin" },
+] as const;
+
+type Expression = (typeof EXPRESSIONS)[number];
+
+type QuizOption = {
+  id: string;
+  label: string;
+  correct: boolean;
+};
+
+type QuizState = {
+  expression: Expression;
+  options: QuizOption[];
+};
 
 const directionVectors: Record<Direction, Point> = {
   up: { x: 0, y: -1 },
@@ -44,7 +68,27 @@ const isOpposite = (current: Direction, next: Direction) => {
   );
 };
 
-const randomEmoji = () => EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+const pickExpression = () => EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
+
+const shuffle = <T,>(items: T[]): T[] => {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+  return copy;
+};
+
+const buildQuizOptions = (expression: Expression): QuizOption[] => {
+  const incorrectPool = EXPRESSIONS.filter((item) => item.symbol !== expression.symbol);
+  const fallback = incorrectPool.length > 0 ? incorrectPool[Math.floor(Math.random() * incorrectPool.length)] : expression;
+  const decoy = incorrectPool.length > 0 ? fallback : expression;
+  const options: QuizOption[] = [
+    { id: `${expression.symbol}-correct`, label: expression.label, correct: true },
+    { id: `${expression.symbol}-decoy`, label: decoy.label, correct: false },
+  ];
+  return shuffle(options);
+};
 
 const spawnFood = (snake: Point[]): Point => {
   const occupied = new Set(snake.map((segment) => `${segment.x}-${segment.y}`));
@@ -70,9 +114,10 @@ type GameState = {
   snake: Point[];
   direction: Direction;
   food: Point;
-  emoji: (typeof EMOJIS)[number];
+  emoji: Expression;
   score: number;
   status: Status;
+  quiz: QuizState | null;
 };
 
 const buildInitialState = (status: Status = "idle"): GameState => {
@@ -87,9 +132,10 @@ const buildInitialState = (status: Status = "idle"): GameState => {
     snake,
     direction: "right",
     food: spawnFood(snake),
-    emoji: randomEmoji(),
+    emoji: pickExpression(),
     score: 0,
     status,
+    quiz: null,
   };
 };
 
@@ -187,13 +233,20 @@ export default function SnakemojiGame() {
         const nextSnake = willEat ? grownSnake : grownSnake.slice(0, -1);
 
         if (willEat) {
+          const consumedExpression = current.emoji;
           const nextFood = spawnFood(nextSnake);
+          const nextExpression = pickExpression();
           return {
             ...current,
             snake: nextSnake,
             food: nextFood,
-            emoji: randomEmoji(),
+            emoji: nextExpression,
             score: current.score + 1,
+            status: "quiz",
+            quiz: {
+              expression: consumedExpression,
+              options: buildQuizOptions(consumedExpression),
+            },
           };
         }
 
@@ -213,6 +266,28 @@ export default function SnakemojiGame() {
     },
     [requestDirectionChange],
   );
+
+  const handleQuizAnswer = (option: QuizOption) => {
+    setState((current) => {
+      if (current.status !== "quiz" || !current.quiz) {
+        return current;
+      }
+
+      if (option.correct) {
+        return {
+          ...current,
+          status: "playing",
+          quiz: null,
+        };
+      }
+
+      return {
+        ...current,
+        status: "over",
+        quiz: null,
+      };
+    });
+  };
 
   const handleRestart = () => {
     setState(buildInitialState("playing"));
@@ -295,14 +370,15 @@ export default function SnakemojiGame() {
     event.preventDefault();
   };
 
+  const showStatusOverlay = state.status === "idle" || state.status === "over";
   const overlayTitle = state.status === "over" ? "Game over" : "Ready";
   const overlaySubtitle =
     state.status === "over"
       ? `You reached ${state.score} point${state.score === 1 ? "" : "s"}.`
-      : "Press an arrow key or tap start to glide.";
+      : "Press an arrow key or tap start to glide. Match the faces to keep moving.";
   const overlayCta = state.status === "over" ? "Play again" : "Start";
   const controlButtonClass =
-    "rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-lg text-white transition active:translate-y-[1px] active:border-white/40 active:bg-white/20";
+    "rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-lg text-white transition active:translate-y-[1px] active:border-white/40 active:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-14 sm:px-10 lg:px-16">
@@ -367,7 +443,7 @@ export default function SnakemojiGame() {
                 } else if (isFood) {
                   cellClass = "relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-accent/20";
                   content = (
-                    <span className="flex h-full w-full items-center justify-center text-xl">{state.emoji}</span>
+                    <span className="flex h-full w-full items-center justify-center text-xl">{state.emoji.symbol}</span>
                   );
                 }
 
@@ -380,7 +456,7 @@ export default function SnakemojiGame() {
             )}
           </div>
 
-          {state.status !== "playing" && (
+          {showStatusOverlay && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/70 text-center backdrop-blur-sm">
               <div className="flex flex-col gap-1">
                 <span className="text-xs uppercase tracking-[0.3em] text-muted/60">{overlayTitle}</span>
@@ -397,14 +473,46 @@ export default function SnakemojiGame() {
                 </span>
               </button>
               <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted/60">
-                arrows · wasd · space · swipe
+                arrows · wasd · space · swipe · quiz
               </p>
+            </div>
+          )}
+          {state.status === "quiz" && state.quiz && (
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-black/80 text-center backdrop-blur-sm"
+              data-swipe-ignore="true"
+            >
+              <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl border border-white/10 bg-slate-950/90 p-6">
+                <span className="text-5xl" aria-label={state.quiz.expression.label} role="img">
+                  {state.quiz.expression.symbol}
+                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-[0.3em] text-muted/60">Face check</span>
+                  <span className="text-base font-medium text-white">Which feeling fits this emoji?</span>
+                </div>
+                <div className="flex w-full flex-col gap-3">
+                  {state.quiz.options.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleQuizAnswer(option)}
+                      className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40 hover:bg-white/20"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[0.65rem] uppercase tracking-[0.3em] text-muted/60">
+                  Pick right to keep gliding
+                </p>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="mx-auto flex w-full max-w-xs flex-col items-center sm:hidden" data-swipe-ignore="true">
+      <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-3 sm:hidden" data-swipe-ignore="true">
+        <span className="text-[0.65rem] uppercase tracking-[0.3em] text-muted/60">Tap to steer</span>
         <div className="grid w-full grid-cols-3 gap-3">
           <div />
           <button
@@ -412,6 +520,7 @@ export default function SnakemojiGame() {
             onClick={() => handleDirectionTap("up")}
             className={controlButtonClass}
             aria-label="Move up"
+            disabled={state.status !== "playing"}
           >
             ↑
           </button>
@@ -421,6 +530,7 @@ export default function SnakemojiGame() {
             onClick={() => handleDirectionTap("left")}
             className={controlButtonClass}
             aria-label="Move left"
+            disabled={state.status !== "playing"}
           >
             ←
           </button>
@@ -429,6 +539,7 @@ export default function SnakemojiGame() {
             onClick={() => handleDirectionTap("down")}
             className={controlButtonClass}
             aria-label="Move down"
+            disabled={state.status !== "playing"}
           >
             ↓
           </button>
@@ -437,6 +548,7 @@ export default function SnakemojiGame() {
             onClick={() => handleDirectionTap("right")}
             className={controlButtonClass}
             aria-label="Move right"
+            disabled={state.status !== "playing"}
           >
             →
           </button>
@@ -444,7 +556,7 @@ export default function SnakemojiGame() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-muted/60">
-        <div>Collect emojis to extend your trail. Walls and your own tail end the run.</div>
+        <div>Collect emojis to extend your trail. Match each mood to keep the run alive.</div>
         <button
           onClick={handleRestart}
           className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-muted/70 transition hover:border-white/40 hover:text-white"
