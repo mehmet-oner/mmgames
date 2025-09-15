@@ -10,7 +10,7 @@ type Direction = "up" | "down" | "left" | "right";
 type Status = "idle" | "playing" | "over" | "quiz";
 
 const BOARD_SIZE = 14;
-const SPEED = 180;
+const SPEED = 250;
 const EXPRESSIONS = [
   { symbol: "😀", label: "Grinning face" },
   { symbol: "😎", label: "Cool face" },
