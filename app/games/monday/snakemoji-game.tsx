@@ -207,6 +207,13 @@ export default function SnakemojiGame() {
   const snakeSet = useMemo(() => new Set(state.snake.map((segment) => `${segment.x}-${segment.y}`)), [state.snake]);
   const headKey = `${state.snake[0].x}-${state.snake[0].y}`;
 
+  const handleDirectionTap = useCallback(
+    (direction: Direction) => {
+      requestDirectionChange(direction);
+    },
+    [requestDirectionChange],
+  );
+
   const handleRestart = () => {
     setState(buildInitialState("playing"));
   };
@@ -294,6 +301,8 @@ export default function SnakemojiGame() {
       ? `You reached ${state.score} point${state.score === 1 ? "" : "s"}.`
       : "Press an arrow key or tap start to glide.";
   const overlayCta = state.status === "over" ? "Play again" : "Start";
+  const controlButtonClass =
+    "rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-lg text-white transition active:translate-y-[1px] active:border-white/40 active:bg-white/20";
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-10 px-6 py-14 sm:px-10 lg:px-16">
@@ -320,9 +329,7 @@ export default function SnakemojiGame() {
         <span className="text-xs uppercase tracking-[0.35em] text-muted/70">Monday</span>
         <h1 className="text-4xl font-semibold text-white sm:text-5xl">Snakemoji</h1>
         <p className="max-w-2xl text-sm text-muted sm:text-base">
-          Guide the neon snake, snack on vibrant emojis, and keep momentum without clashing into walls or yourself.
-          Minimal surface, pure flow.
-        </p>
+          Guide the neon snake, snack on vibrant emojis, and keep momentum without clashing into walls or yourself.        </p>
       </header>
 
       <div className="relative mx-auto w-full max-w-lg">
@@ -394,6 +401,45 @@ export default function SnakemojiGame() {
               </p>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="mx-auto flex w-full max-w-xs flex-col items-center sm:hidden" data-swipe-ignore="true">
+        <div className="grid w-full grid-cols-3 gap-3">
+          <div />
+          <button
+            type="button"
+            onClick={() => handleDirectionTap("up")}
+            className={controlButtonClass}
+            aria-label="Move up"
+          >
+            ↑
+          </button>
+          <div />
+          <button
+            type="button"
+            onClick={() => handleDirectionTap("left")}
+            className={controlButtonClass}
+            aria-label="Move left"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDirectionTap("down")}
+            className={controlButtonClass}
+            aria-label="Move down"
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDirectionTap("right")}
+            className={controlButtonClass}
+            aria-label="Move right"
+          >
+            →
+          </button>
         </div>
       </div>
 
