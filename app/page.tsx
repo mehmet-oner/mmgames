@@ -1,9 +1,11 @@
+import Link from "next/link";
+
 const DAYS = [
   {
     id: "monday",
     name: "Monday",
-    game: "Neon Drift",
-    vibe: "Ease into the week with a zen racer.",
+    game: "Snakemoji",
+    vibe: "Glide through a neon grid and snack on living emojis.",
   },
   {
     id: "tuesday",
@@ -56,7 +58,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full bg-transparent text-foreground">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-20 px-6 py-16 sm:px-10 lg:px-12">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-16 sm:px-10 lg:px-12">
         <header className="flex flex-col gap-8">
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm uppercase tracking-[0.35em] text-muted">MM Games</span>
@@ -66,12 +68,10 @@ export default function Home() {
           </div>
           <div className="flex flex-col gap-6">
             <h1 className="text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
-              Seven curated game worlds, unlocked one day at a time.
+             One day. One game.
             </h1>
             <p className="max-w-2xl text-base text-muted sm:text-lg">
-              Discover a focused experience tailored for the rhythm of each weekday.
-              Our minimalist arcade keeps you in the flow: one game per day, with a
-              clean space to track progress, mastery, and mood.
+              Stay in the flow with a clean, focused arcade built for your weekday rhythm.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted/70 sm:text-sm">
@@ -89,6 +89,20 @@ export default function Home() {
           {DAYS.map((day, index) => {
             const isToday = index === todayIndex;
             const isUnlocked = index <= todayIndex;
+            const isPlayable = day.id === "monday" && isUnlocked;
+            const actionLabel = !isUnlocked
+              ? "Locked"
+              : day.id === "monday"
+              ? isToday
+                ? "Launch"
+                : "Replay"
+              : "Coming soon";
+
+            const actionClasses = isPlayable
+              ? "border-emerald-400/70 bg-emerald-500/10 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:border-emerald-300 hover:bg-emerald-500/20 hover:text-white"
+              : isUnlocked
+              ? "border-white/10 text-muted/60 cursor-not-allowed"
+              : "border-white/5 text-muted/40 cursor-not-allowed";
 
             return (
               <article
@@ -116,19 +130,27 @@ export default function Home() {
                         ? "Available to revisit"
                         : "Unlocks soon"}
                     </span>
-                    <button
-                      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-medium transition ${
-                        isUnlocked
-                          ? "border-white/10 text-white/80 hover:border-white/40 hover:text-white"
-                          : "border-white/5 text-muted/40"
-                      }`}
-                      disabled={!isUnlocked}
-                    >
-                      {isUnlocked ? (isToday ? "Launch" : "Replay") : "Locked"}
-                      <span aria-hidden className="text-white/60">
-                        →
+                    {isPlayable ? (
+                      <Link
+                        href="/games/monday"
+                        className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-medium transition ${actionClasses}`}
+                      >
+                        {actionLabel}
+                        <span aria-hidden className={isPlayable ? "text-emerald-200" : "text-white/60"}>
+                          →
+                        </span>
+                      </Link>
+                    ) : (
+                      <span
+                        aria-disabled
+                        className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-medium transition ${actionClasses}`}
+                      >
+                        {actionLabel}
+                        <span aria-hidden className="text-white/40">
+                          →
+                        </span>
                       </span>
-                    </button>
+                    )}
                   </div>
                 </div>
               </article>
