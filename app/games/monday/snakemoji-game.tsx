@@ -10,7 +10,7 @@ type Direction = "up" | "down" | "left" | "right";
 type Status = "idle" | "playing" | "over" | "quiz";
 
 const BOARD_SIZE = 14;
-const SPEED = 160;
+const SPEED = 180;
 const EXPRESSIONS = [
   { symbol: "😀", label: "Grinning face" },
   { symbol: "😎", label: "Cool face" },
@@ -22,6 +22,16 @@ const EXPRESSIONS = [
   { symbol: "🤔", label: "Thinking face" },
   { symbol: "😴", label: "Sleepy face" },
   { symbol: "😅", label: "Nervous grin" },
+  { symbol: "😇", label: "Innocent face" },
+  { symbol: "😈", label: "Mischievous grin" },
+  { symbol: "🥳", label: "Party face" },
+  { symbol: "😤", label: "Triumphant face" },
+  { symbol: "🤯", label: "Mind blown" },
+  { symbol: "😭", label: "Loudly crying" },
+  { symbol: "🤠", label: "Cowboy grin" },
+  { symbol: "🥺", label: "Pleading face" },
+  { symbol: "🤤", label: "Drooling face" },
+  { symbol: "🤪", label: "Zany face" },
 ] as const;
 
 type Expression = (typeof EXPRESSIONS)[number];
@@ -192,6 +202,10 @@ export default function SnakemojiGame() {
       const nextDirection = keyToDirection[event.key];
       if (!nextDirection) {
         return;
+      }
+
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
       }
 
       requestDirectionChange(nextDirection);
