@@ -10,8 +10,8 @@ const DAYS = [
   {
     id: "tuesday",
     name: "Tuesday",
-    game: "Echo Shift",
-    vibe: "Puzzle loops crafted to sharpen focus.",
+    game: "Colors",
+    vibe: "Hyper-fast hue locks with fake-outs and streak multipliers.",
   },
   {
     id: "wednesday",
@@ -89,24 +89,22 @@ export default function Home() {
           {DAYS.map((day, index) => {
             const isToday = index === todayIndex;
             const isUnlocked = index <= todayIndex;
-            const isPlayable = isUnlocked;
+            const hasRoute = day.id === "monday" || day.id === "tuesday";
+            const isPlayable = hasRoute && isUnlocked;
 
             const isBeforeToday = index < todayIndex;
             const isTomorrow = index === (todayIndex + 1) % 7;
-            const isSunday = todayIndex === 6;
 
-            const actionLabel = isSunday
-              ? (isToday ? "Launch" : "Replay")
-              : isToday
-              ? "Launch"
-              : isTomorrow
+            const actionLabel = isPlayable
+              ? isToday
+                ? "Launch"
+                : "Replay"
+              : isUnlocked || isTomorrow
               ? "Coming soon"
-              : isBeforeToday
-              ? "Replay"
               : "Locked";
 
             const { actionClasses, actionIconClass } = (() => {
-              if (isToday) {
+              if (isPlayable && isToday) {
                 return {
                   actionClasses:
                     "border-emerald-400/70 bg-emerald-500/10 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:border-emerald-300 hover:bg-emerald-500/20 hover:text-white",
@@ -114,7 +112,7 @@ export default function Home() {
                 };
               }
 
-              if (isBeforeToday) {
+              if (isPlayable && isBeforeToday) {
                 return {
                   actionClasses:
                     "border-orange-300/70 bg-orange-500/10 text-orange-100 shadow-[0_0_20px_rgba(251,146,60,0.2)] hover:border-orange-200 hover:bg-orange-500/20 hover:text-white",
@@ -156,14 +154,18 @@ export default function Home() {
                         className={`inline-flex h-2 w-2 rounded-full ${isUnlocked ? "bg-accent/80" : "bg-muted/40"}`}
                       />
                       {isToday
-                        ? "Live today"
+                        ? hasRoute
+                          ? "Live today"
+                          : "Waiting to unlock"
                         : isUnlocked
-                        ? "Available to revisit"
+                        ? hasRoute
+                          ? "Available to revisit"
+                          : "Coming soon"
                         : "Unlocks soon"}
                     </span>
                     {isPlayable ? (
                       <Link
-                        href="/games/monday"
+                        href={`/games/${day.id}`}
                         className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-medium transition ${actionClasses}`}
                       >
                         {actionLabel}
