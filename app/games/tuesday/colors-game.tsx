@@ -480,7 +480,7 @@ export default function ColorsGame() {
             onClick={beginGame}
             className="rounded-full border border-white/20 bg-white/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white shadow-[0_10px_40px_rgba(56,189,248,0.25)] transition hover:border-white/40 hover:bg-white/20"
           >
-            Start Run
+            Start
           </button>
           <span className="text-[0.6rem] uppercase tracking-[0.4em] text-white/30">Tap to sync with the hue</span>
         </div>
