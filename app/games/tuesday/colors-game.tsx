@@ -36,11 +36,8 @@ type PointerSnapshot = {
 
 const COLOR_LIBRARY: ColorSlice[] = [
   { id: "sky", name: "Sky", value: "#38bdf8", glow: "rgba(56,189,248,0.45)" },
-  { id: "violet", name: "Violet", value: "#c084fc", glow: "rgba(192,132,252,0.45)" },
   { id: "emerald", name: "Emerald", value: "#34d399", glow: "rgba(52,211,153,0.45)" },
-  { id: "amber", name: "Amber", value: "#fbbf24", glow: "rgba(251,191,36,0.45)" },
   { id: "rose", name: "Rose", value: "#fb7185", glow: "rgba(251,113,133,0.45)" },
-  { id: "cyan", name: "Cyan", value: "#22d3ee", glow: "rgba(34,211,238,0.45)" },
   { id: "lime", name: "Lime", value: "#a3e635", glow: "rgba(163,230,53,0.45)" },
   { id: "fuchsia", name: "Fuchsia", value: "#e879f9", glow: "rgba(232,121,249,0.45)" },
   { id: "blue", name: "Blue", value: "#60a5fa", glow: "rgba(96,165,250,0.45)" },
