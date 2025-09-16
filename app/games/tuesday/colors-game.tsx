@@ -560,7 +560,7 @@ export default function ColorsGame() {
 
           <div className="flex flex-col gap-3">
             <span className="text-xs uppercase tracking-[0.35em] text-white/60">Tuesday</span>
-            <h1 className="text-4xl font-semibold text-white sm:text-5xl">Colors</h1>
+            <h1 className="text-4xl font-semibold text-white sm:text-5xl">Colors+</h1>
             <p className="max-w-2xl text-sm text-white/70 sm:text-base">
               Hold focus as the chroma wheel swings, nail taps on the matching hue, and stay calm when the signal is a fake.
             </p>

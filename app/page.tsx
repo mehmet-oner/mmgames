@@ -10,7 +10,7 @@ const DAYS = [
   {
     id: "tuesday",
     name: "Tuesday",
-    game: "Colors",
+    game: "Colors+",
     vibe: "Hyper-fast hue locks with fake-outs and streak multipliers.",
   },
   {
