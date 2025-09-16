@@ -89,25 +89,56 @@ export default function Home() {
           {DAYS.map((day, index) => {
             const isToday = index === todayIndex;
             const isUnlocked = index <= todayIndex;
-            const isPlayable = day.id === "monday" && isUnlocked;
-            const actionLabel = !isUnlocked
-              ? "Locked"
-              : day.id === "monday"
-              ? isToday
-                ? "Launch"
-                : "Replay"
-              : "Coming soon";
+            const isPlayable = isUnlocked;
 
-            const actionClasses = isPlayable
-              ? "border-emerald-400/70 bg-emerald-500/10 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:border-emerald-300 hover:bg-emerald-500/20 hover:text-white"
-              : isUnlocked
-              ? "border-white/10 text-muted/60 cursor-not-allowed"
-              : "border-white/5 text-muted/40 cursor-not-allowed";
+            const isBeforeToday = index < todayIndex;
+            const isTomorrow = index === (todayIndex + 1) % 7;
+            const isSunday = todayIndex === 6;
+
+            const actionLabel = isSunday
+              ? (isToday ? "Launch" : "Replay")
+              : isToday
+              ? "Launch"
+              : isTomorrow
+              ? "Coming soon"
+              : isBeforeToday
+              ? "Replay"
+              : "Locked";
+
+            const { actionClasses, actionIconClass } = (() => {
+              if (isToday) {
+                return {
+                  actionClasses:
+                    "border-emerald-400/70 bg-emerald-500/10 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:border-emerald-300 hover:bg-emerald-500/20 hover:text-white",
+                  actionIconClass: "text-emerald-200",
+                };
+              }
+
+              if (isBeforeToday) {
+                return {
+                  actionClasses:
+                    "border-orange-300/70 bg-orange-500/10 text-orange-100 shadow-[0_0_20px_rgba(251,146,60,0.2)] hover:border-orange-200 hover:bg-orange-500/20 hover:text-white",
+                  actionIconClass: "text-orange-200",
+                };
+              }
+
+              if (isUnlocked) {
+                return {
+                  actionClasses: "border-white/10 text-muted/60 cursor-not-allowed",
+                  actionIconClass: "text-white/60",
+                };
+              }
+
+              return {
+                actionClasses: "border-white/5 text-muted/40 cursor-not-allowed",
+                actionIconClass: "text-white/60",
+              };
+            })();
 
             return (
               <article
                 key={day.id}
-                className="group relative overflow-hidden rounded-3xl border border-white/8 bg-white/5 p-6 transition hover:-translate-y-1 hover:border-white/20 hover:bg-white/10"
+                className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/8 bg-white/5 p-6 transition hover:-translate-y-1 hover:border-white/20 hover:bg-white/10"
               >
                 <div className="absolute inset-x-6 top-6 z-0 h-32 rounded-3xl bg-gradient-to-br from-white/15 to-white/0 opacity-0 blur-2xl transition group-hover:opacity-100" />
                 <header className="relative z-10 mb-8 flex items-center justify-between text-xs uppercase tracking-[0.3em] text-muted/80">
@@ -116,10 +147,10 @@ export default function Home() {
                     {day.id}
                   </span>
                 </header>
-                <div className="relative z-10 flex flex-col gap-4">
+                <div className="relative z-10 flex flex-1 flex-col gap-4">
                   <h2 className="text-2xl font-semibold text-white">{day.game}</h2>
                   <p className="text-sm leading-relaxed text-muted/90">{day.vibe}</p>
-                  <div className="mt-6 flex items-center justify-between text-xs text-muted/70">
+                  <div className="mt-auto flex items-center justify-between pt-6 text-xs text-muted/70">
                     <span className="flex items-center gap-2">
                       <span
                         className={`inline-flex h-2 w-2 rounded-full ${isUnlocked ? "bg-accent/80" : "bg-muted/40"}`}
@@ -136,7 +167,7 @@ export default function Home() {
                         className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-medium transition ${actionClasses}`}
                       >
                         {actionLabel}
-                        <span aria-hidden className={isPlayable ? "text-emerald-200" : "text-white/60"}>
+                        <span aria-hidden className={actionIconClass}>
                           →
                         </span>
                       </Link>
