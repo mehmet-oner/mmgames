@@ -16,8 +16,8 @@ const DAYS = [
   {
     id: "wednesday",
     name: "Wednesday",
-    game: "Midweek Mirage",
-    vibe: "Rhythm lights in a slow build crescendo.",
+    game: "Chroma Trace",
+    vibe: "Shapes flash in color — trace them from memory to stay in the run.",
   },
   {
     id: "thursday",
@@ -89,7 +89,7 @@ export default function Home() {
           {DAYS.map((day, index) => {
             const isToday = index === todayIndex;
             const isUnlocked = index <= todayIndex;
-            const hasRoute = day.id === "monday" || day.id === "tuesday";
+            const hasRoute = day.id === "monday" || day.id === "tuesday" || day.id === "wednesday";
             const isPlayable = hasRoute && isUnlocked;
 
             const isBeforeToday = index < todayIndex;

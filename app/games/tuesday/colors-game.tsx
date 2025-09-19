@@ -548,10 +548,6 @@ export default function ColorsGame() {
                   Best <span className="font-mono text-white">{highScore}</span>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-                <span className="rounded-full border border-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-white/70">Combo ×{combo}</span>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-white/70">Phase {describeDifficulty(intensity)}</span>
-              </div>
             </div>
           </div>
 
