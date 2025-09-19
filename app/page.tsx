@@ -22,8 +22,8 @@ const DAYS = [
   {
     id: "thursday",
     name: "Thursday",
-    game: "Flux Grid",
-    vibe: "Strategic tiles that rewire with every move.",
+    game: "Tilt Drop",
+    vibe: "Tap to spin falling blocks while the arena tilts mid-run.",
   },
   {
     id: "friday",
@@ -89,7 +89,7 @@ export default function Home() {
           {DAYS.map((day, index) => {
             const isToday = index === todayIndex;
             const isUnlocked = index <= todayIndex;
-            const hasRoute = day.id === "monday" || day.id === "tuesday" || day.id === "wednesday";
+            const hasRoute = ["monday", "tuesday", "wednesday", "thursday"].includes(day.id);
             const isPlayable = hasRoute && isUnlocked;
 
             const isBeforeToday = index < todayIndex;
