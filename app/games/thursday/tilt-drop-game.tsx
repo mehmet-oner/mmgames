@@ -738,7 +738,7 @@ export default function TiltDropGame() {
   }, [nextPiece]);
 
   return (
-    <div className="min-h-screen bg-slate-950/90 text-white">
+    <div className="min-h-screen overflow-hidden bg-slate-950/90 text-white">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-16 sm:px-10 lg:px-12">
         <header className="flex flex-col gap-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -772,7 +772,7 @@ export default function TiltDropGame() {
           </div>
         </header>
 
-        <section className="flex flex-1 flex-col items-center justify-center gap-10 lg:flex-row lg:items-start">
+        <section className="flex flex-1 touch-none flex-col items-center justify-center gap-10 lg:flex-row lg:items-start">
           <div className="flex flex-col items-center gap-4">
             <div
               className="relative flex h-[26rem] w-[16rem] items-center justify-center rounded-[2.5rem] border border-white/10 bg-slate-900/60 p-3 shadow-[0_40px_80px_rgba(15,23,42,0.55)] backdrop-blur"
@@ -839,7 +839,7 @@ export default function TiltDropGame() {
                     beginRun();
                   }
                 }}
-                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-white transition hover:border-white/30 hover:bg-white/15"
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-white transition hover:border-white/30 hover:bg-white/15 select-none"
               >
                 {status === "playing" ? "Rotate" : "Start run"}
               </button>
@@ -873,7 +873,10 @@ export default function TiltDropGame() {
                     beginRun();
                   }
                 }}
-                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-white transition hover:border-white/30 hover:bg-white/15"
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                }}
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-white transition hover:border-white/30 hover:bg-white/15 select-none"
               >
                 {status === "playing" ? "Drop" : "Replay"}
               </button>
