@@ -36,6 +36,8 @@ const INITIAL_DROP_DELAY = 820;
 const DROP_DECAY = 0.78;
 const MIN_DROP_DELAY = 120;
 const LINES_PER_LEVEL = 6;
+const DROP_HOLD_DELAY_MS = 200;
+const DROP_HOLD_INTERVAL_MS = 90;
 
 const LINE_SCORES = [0, 120, 300, 700, 1200];
 
@@ -260,6 +262,22 @@ export default function TiltDropGame() {
   const messageTimerRef = useRef<number | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const statusRef = useRef<GameStatus>(status);
+  const activePieceRef = useRef<ActivePiece | null>(null);
+  const pointerDragRef = useRef<
+    | {
+        startX: number;
+        startY: number;
+        baseX: number;
+        baseY: number;
+        shiftX: number;
+        shiftY: number;
+      }
+    | null
+  >(null);
+  const dropHoldDelayRef = useRef<number | null>(null);
+  const dropHoldIntervalRef = useRef<number | null>(null);
+  const dropHoldActiveRef = useRef(false);
+  const dropPreventClickRef = useRef(false);
 
   useEffect(() => {
     if (score > highScore) {
@@ -272,6 +290,10 @@ export default function TiltDropGame() {
   }, [status]);
 
   useEffect(() => {
+    activePieceRef.current = activePiece;
+  }, [activePiece]);
+
+  useEffect(() => {
     return () => {
       if (swingTimerRef.current) {
         window.clearTimeout(swingTimerRef.current);
@@ -281,6 +303,12 @@ export default function TiltDropGame() {
       }
       if (messageTimerRef.current) {
         window.clearTimeout(messageTimerRef.current);
+      }
+      if (dropHoldDelayRef.current) {
+        window.clearTimeout(dropHoldDelayRef.current);
+      }
+      if (dropHoldIntervalRef.current) {
+        window.clearInterval(dropHoldIntervalRef.current);
       }
     };
   }, []);
@@ -401,13 +429,47 @@ export default function TiltDropGame() {
     [activePiece, board, endRun, linesCleared, nextPiece, status]
   );
 
-  const fastDrop = useCallback(() => {
+  const stopDropHold = useCallback(() => {
+    if (dropHoldDelayRef.current) {
+      window.clearTimeout(dropHoldDelayRef.current);
+      dropHoldDelayRef.current = null;
+    }
+    if (dropHoldIntervalRef.current) {
+      window.clearInterval(dropHoldIntervalRef.current);
+      dropHoldIntervalRef.current = null;
+    }
+    if (dropHoldActiveRef.current) {
+      dropHoldActiveRef.current = false;
+      if (statusRef.current === "playing") {
+        dropPreventClickRef.current = true;
+      }
+    } else {
+      dropHoldActiveRef.current = false;
+    }
+  }, []);
+
+  const startDropHold = useCallback(() => {
+    dropPreventClickRef.current = false;
+    dropHoldActiveRef.current = false;
+    if (dropHoldDelayRef.current) {
+      window.clearTimeout(dropHoldDelayRef.current);
+    }
+    if (dropHoldIntervalRef.current) {
+      window.clearInterval(dropHoldIntervalRef.current);
+    }
+    dropHoldDelayRef.current = null;
+    dropHoldIntervalRef.current = null;
     if (statusRef.current !== "playing") {
       return;
     }
-    for (let step = 0; step < 4; step += 1) {
+    dropHoldDelayRef.current = window.setTimeout(() => {
+      dropHoldDelayRef.current = null;
+      dropHoldActiveRef.current = true;
       attemptMove(0, 1);
-    }
+      dropHoldIntervalRef.current = window.setInterval(() => {
+        attemptMove(0, 1);
+      }, DROP_HOLD_INTERVAL_MS);
+    }, DROP_HOLD_DELAY_MS);
   }, [attemptMove]);
 
   const rotatePiece = useCallback(() => {
@@ -493,17 +555,124 @@ export default function TiltDropGame() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [attemptMove, hardDrop, rotatePiece, status]);
 
+  useEffect(() => {
+    if (status !== "playing") {
+      stopDropHold();
+      dropPreventClickRef.current = false;
+    }
+  }, [status, stopDropHold]);
+
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
+      if (event.button && event.button !== 0) {
+        return;
+      }
       if (statusRef.current !== "playing") {
+        pointerStartRef.current = null;
+        pointerDragRef.current = null;
         beginRun();
         return;
       }
+      const piece = activePieceRef.current;
+      if (!piece) {
+        return;
+      }
       pointerStartRef.current = { x: event.clientX, y: event.clientY, time: performance.now() };
+      pointerDragRef.current = {
+        startX: event.clientX,
+        startY: event.clientY,
+        baseX: piece.position.x,
+        baseY: piece.position.y,
+        shiftX: 0,
+        shiftY: 0,
+      };
       event.currentTarget.setPointerCapture(event.pointerId);
     },
     [beginRun]
+  );
+
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = pointerDragRef.current;
+      const piece = activePieceRef.current;
+      if (!drag || statusRef.current !== "playing" || !piece) {
+        return;
+      }
+      event.preventDefault();
+      const rect = event.currentTarget.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        return;
+      }
+      const cellWidth = rect.width / BOARD_WIDTH;
+      const cellHeight = rect.height / BOARD_HEIGHT;
+      const expectedX = drag.baseX + drag.shiftX;
+      const expectedY = drag.baseY + drag.shiftY;
+      if (piece.position.x !== expectedX || piece.position.y !== expectedY) {
+        drag.baseX = piece.position.x - drag.shiftX;
+        drag.baseY = piece.position.y - drag.shiftY;
+      }
+
+      const rawShiftX = (event.clientX - drag.startX) / cellWidth;
+      const rawShiftY = (event.clientY - drag.startY) / cellHeight;
+      const desiredShiftX = Math.max(-BOARD_WIDTH, Math.min(BOARD_WIDTH, Math.round(rawShiftX)));
+      const desiredShiftY = Math.max(0, Math.floor(rawShiftY + 0.25));
+
+      let nextShiftX = drag.shiftX;
+      let nextShiftY = drag.shiftY;
+      const canOccupy = (shiftX: number, shiftY: number) =>
+        canPlace(
+          board,
+          piece.shape,
+          { x: drag.baseX + shiftX, y: drag.baseY + shiftY },
+          piece.rotation
+        );
+
+      while (nextShiftX < desiredShiftX) {
+        if (canOccupy(nextShiftX + 1, nextShiftY)) {
+          nextShiftX += 1;
+        } else {
+          break;
+        }
+      }
+
+      while (nextShiftX > desiredShiftX) {
+        if (canOccupy(nextShiftX - 1, nextShiftY)) {
+          nextShiftX -= 1;
+        } else {
+          break;
+        }
+      }
+
+      while (nextShiftY < desiredShiftY) {
+        if (canOccupy(nextShiftX, nextShiftY + 1)) {
+          nextShiftY += 1;
+        } else {
+          break;
+        }
+      }
+
+      if (nextShiftX === drag.shiftX && nextShiftY === drag.shiftY) {
+        return;
+      }
+
+      drag.shiftX = nextShiftX;
+      drag.shiftY = nextShiftY;
+
+      setActivePiece((previous) => {
+        if (!previous) {
+          return previous;
+        }
+        return {
+          ...previous,
+          position: {
+            x: drag.baseX + nextShiftX,
+            y: drag.baseY + nextShiftY,
+          },
+        };
+      });
+    },
+    [board]
   );
 
   const handlePointerUp = useCallback(
@@ -511,6 +680,8 @@ export default function TiltDropGame() {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
+      const drag = pointerDragRef.current;
+      pointerDragRef.current = null;
       const start = pointerStartRef.current;
       pointerStartRef.current = null;
       if (!start || statusRef.current !== "playing") {
@@ -518,25 +689,14 @@ export default function TiltDropGame() {
       }
       const deltaX = event.clientX - start.x;
       const deltaY = event.clientY - start.y;
-      const absX = Math.abs(deltaX);
-      const absY = Math.abs(deltaY);
       const duration = performance.now() - start.time;
-      const swipeThreshold = 24;
-      if (absX > swipeThreshold && absX > absY) {
-        attemptMove(deltaX > 0 ? 1 : -1, 0);
-        return;
+      const movedViaDrag = drag && (drag.shiftX !== 0 || drag.shiftY !== 0);
+      const isTap = Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12 && duration < 260 && !movedViaDrag;
+      if (isTap) {
+        rotatePiece();
       }
-      if (absY > 100 && absY > absX) {
-        if (duration < 220) {
-          hardDrop();
-        } else {
-          fastDrop();
-        }
-        return;
-      }
-      rotatePiece();
     },
-    [attemptMove, fastDrop, hardDrop, rotatePiece]
+    [rotatePiece]
   );
 
   const handlePointerCancel = useCallback((event?: React.PointerEvent<HTMLDivElement>) => {
@@ -544,6 +704,7 @@ export default function TiltDropGame() {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     pointerStartRef.current = null;
+    pointerDragRef.current = null;
   }, []);
 
   const displayBoard = useMemo(() => {
@@ -627,6 +788,7 @@ export default function TiltDropGame() {
                 <div
                   className="absolute inset-0 touch-none"
                   onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
                   onPointerCancel={handlePointerCancel}
                   role="presentation"
@@ -683,8 +845,29 @@ export default function TiltDropGame() {
               </button>
               <button
                 type="button"
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  if (event.button && event.button !== 0) {
+                    return;
+                  }
+                  startDropHold();
+                }}
+                onPointerUp={() => {
+                  stopDropHold();
+                }}
+                onPointerLeave={() => {
+                  stopDropHold();
+                }}
+                onPointerCancel={() => {
+                  stopDropHold();
+                }}
                 onClick={() => {
                   if (status === "playing") {
+                    if (dropPreventClickRef.current) {
+                      dropPreventClickRef.current = false;
+                      return;
+                    }
+                    dropPreventClickRef.current = false;
                     hardDrop();
                   } else {
                     beginRun();
