@@ -46,7 +46,7 @@ const DAYS = [
 ];
 
 const getTodayIndex = () => {
-  return 6;
+  // return 6;
   const today = new Date();
   return (today.getDay() + 6) % 7; // shift so Monday = 0 ... Sunday = 6
 };

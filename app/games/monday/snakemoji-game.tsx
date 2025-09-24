@@ -248,8 +248,25 @@ export default function SnakemojiGame() {
 
         if (willEat) {
           const consumedExpression = current.emoji;
+          const consumedAtEdge =
+            current.food.x === 0 ||
+            current.food.x === BOARD_SIZE - 1 ||
+            current.food.y === 0 ||
+            current.food.y === BOARD_SIZE - 1;
           const nextFood = spawnFood(nextSnake);
           const nextExpression = pickExpression();
+
+          if (consumedAtEdge) {
+            return {
+              ...current,
+              snake: nextSnake,
+              food: nextFood,
+              emoji: nextExpression,
+              score: current.score + 1,
+              quiz: null,
+            };
+          }
+
           return {
             ...current,
             snake: nextSnake,
