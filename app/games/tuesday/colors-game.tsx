@@ -535,18 +535,17 @@ export default function ColorsGame() {
             <Link
               href="/"
               className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-white/70 transition hover:border-white/40 hover:text-white"
+              data-swipe-ignore="true"
             >
               <span aria-hidden>←</span>
-              Back to weekly hub
+              Back
             </Link>
-            <div className="flex w-full flex-col items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/60 sm:w-auto sm:items-end">
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:justify-end sm:gap-3">
-                <div className="rounded-full border border-white/10 px-4 py-2 text-white/80">
-                  Score <span className="font-mono text-white/60">{score}</span>
-                </div>
-                <div className="rounded-full border border-white/5 px-4 py-2 text-white/60">
-                  Best <span className="font-mono text-white">{highScore}</span>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-full border border-white/10 px-4 py-2 text-white/80" data-swipe-ignore="true">
+                Score <span className="font-mono text-white/60">{score}</span>
+              </div>
+              <div className="rounded-full border border-white/5 px-4 py-2 text-white/60" data-swipe-ignore="true">
+                Best <span className="font-mono text-white">{highScore}</span>
               </div>
             </div>
           </div>

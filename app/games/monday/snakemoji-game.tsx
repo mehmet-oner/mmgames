@@ -403,7 +403,7 @@ export default function SnakemojiGame() {
           data-swipe-ignore="true"
         >
           <span aria-hidden>←</span>
-          Back to weekly hub
+          Back
         </Link>
         <div className="flex items-center gap-3">
           <div className="rounded-full border border-white/10 px-4 py-2 text-white/80" data-swipe-ignore="true">

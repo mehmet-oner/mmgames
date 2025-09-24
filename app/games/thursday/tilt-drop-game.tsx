@@ -740,31 +740,37 @@ export default function TiltDropGame() {
   return (
     <div className="min-h-screen overflow-hidden bg-slate-950/90 text-white">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-16 sm:px-10 lg:px-12">
-        <header className="flex flex-col gap-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <span className="text-sm uppercase tracking-[0.35em] text-white/60">Thursday</span>
-            <span className="text-xs uppercase tracking-[0.25em] text-white/40">Tilt Drop</span>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/70">
-                Score <span className="font-mono text-white">{score}</span>
-              </div>
-              <div className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/60">
-                Best <span className="font-mono text-white">{highScore}</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/60">
-              <span className="rounded-full border border-white/10 px-3 py-1 text-white/70">Level {level + 1}</span>
-              <span className="rounded-full border border-white/10 px-3 py-1 text-white/70">Lines {linesCleared}</span>
-              {tiltActive && (
-                <span className="flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-500/10 px-3 py-1 text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.25)]">
-                  <span className="text-[0.65rem] uppercase tracking-[0.25em]">Tilt</span>
+        <header className="flex flex-col gap-6">
+          <div className="flex items-center justify-between gap-3 text-sm text-white/70">
+            <Link
+              href="/"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-white/70 transition hover:border-white/40 hover:text-white"
+              data-swipe-ignore="true"
+            >
+              <span aria-hidden>←</span>
+              Back
+            </Link>
+            <div className="flex flex-1 justify-end">
+              <div
+                className="flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap text-xs uppercase tracking-[0.3em] text-white/60"
+                data-swipe-ignore="true"
+              >
+                <span className="rounded-full border border-white/10 px-4 py-2 text-white/70">
+                  Score <span className="font-mono text-white">{score}</span>
                 </span>
-              )}
+                <span className="rounded-full border border-white/10 px-4 py-2 text-white/60">
+                  Best <span className="font-mono text-white">{highScore}</span>
+                </span>
+                {tiltActive && (
+                  <span className="flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-500/10 px-3 py-1 text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.25)]">
+                    <span className="text-[0.65rem] uppercase tracking-[0.25em]">Tilt</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-col gap-3">
+            <span className="text-xs uppercase tracking-[0.35em] text-white/60">Thursday</span>
             <h1 className="text-4xl font-semibold text-white sm:text-5xl">Tilt Drop</h1>
             <p className="max-w-2xl text-sm text-white/70 sm:text-base">
               Rotate falling blocks with taps, swipe to steer, then brace as the whole grid swings off-axis. Keep your cool through the tilt storms.
@@ -882,51 +888,6 @@ export default function TiltDropGame() {
               </button>
             </div>
           </div>
-
-          <aside className="flex w-full max-w-sm flex-col gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-xs uppercase tracking-[0.3em] text-white/70">
-            <div className="flex flex-col gap-3">
-              <span className="text-[0.65rem] text-white/50">Next piece</span>
-              <div className="relative flex h-36 w-36 items-center justify-center rounded-2xl border border-white/10 bg-slate-900/60 shadow-inner">
-                <div className="grid grid-cols-4 grid-rows-4 gap-[2px] p-3">
-                  {nextPreview.map((row, rowIndex) =>
-                    row.map((cell, cellIndex) => (
-                      <div key={`${rowIndex}-${cellIndex}`} className="relative rounded-sm bg-slate-900/80">
-                        {cell && (
-                          <span
-                            className="absolute inset-0 rounded-sm"
-                            style={{
-                              background: `linear-gradient(135deg, ${cell.color}, ${cell.color}CC)`,
-                              boxShadow: `0 0 12px ${cell.glow}`,
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[0.6rem] uppercase tracking-[0.4em] text-white/60">
-                  {nextPiece.name}
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 text-[0.65rem] text-white/60">
-              <span className="font-semibold tracking-[0.35em] text-white/70">Controls</span>
-              <p className="text-white/60">Tap anywhere inside the grid to rotate the current piece.</p>
-              <p className="text-white/60">Swipe left or right to strafe. Flick downward to slam a piece into place.</p>
-              <p className="text-white/60">Every few seconds the arena tilts — keep orienting as gravity stays true.</p>
-            </div>
-            <div className="flex flex-col gap-2 text-[0.65rem] text-white/60">
-              <span className="font-semibold tracking-[0.35em] text-white/70">Keyboard</span>
-              <p className="text-white/60">← → move · ↑ rotate · ↓ soft drop · Enter hard drop</p>
-            </div>
-            <Link
-              href="/"
-              className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/15 px-4 py-2 text-center text-white/70 transition hover:border-white/30 hover:text-white"
-            >
-              Back to hub
-              <span aria-hidden>→</span>
-            </Link>
-          </aside>
         </section>
       </main>
     </div>

@@ -280,7 +280,6 @@ export default function DrawingMatchGame() {
   const [status, setStatus] = useState<GameStatus>("intro");
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [streak, setStreak] = useState(0);
   const [failureReason, setFailureReason] = useState<string | null>(null);
   const [progress, setProgress] = useState(1);
   const [hasSketch, setHasSketch] = useState(false);
@@ -459,7 +458,6 @@ export default function DrawingMatchGame() {
       }
       setFailureReason(reason);
       setStatus("over");
-      setStreak(0);
       setHasSketch(false);
       setProgress(1);
     },
@@ -536,7 +534,6 @@ export default function DrawingMatchGame() {
     }
 
     setScore((current) => current + reward);
-    setStreak((current) => current + 1);
     setStatus("result");
 
     roundTimeoutRef.current = window.setTimeout(() => {
@@ -576,7 +573,6 @@ export default function DrawingMatchGame() {
 
   const beginGame = useCallback(() => {
     setScore(0);
-    setStreak(0);
     setFailureReason(null);
     beginPreview();
   }, [beginPreview]);
@@ -681,26 +677,17 @@ export default function DrawingMatchGame() {
             <Link
               href="/"
               className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-white/70 transition hover:border-white/40 hover:text-white"
+              data-swipe-ignore="true"
             >
               <span aria-hidden>←</span>
-              Back to weekly hub
+              Back
             </Link>
-            <div className="flex w-full flex-col items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/60 sm:w-auto sm:items-end">
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:justify-end sm:gap-3">
-                <div className="rounded-full border border-white/10 px-4 py-2 text-white/80">
-                  Score <span className="font-mono text-white/60">{score}</span>
-                </div>
-                <div className="rounded-full border border-white/5 px-4 py-2 text-white/60">
-                  Best <span className="font-mono text-white">{highScore}</span>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-full border border-white/10 px-4 py-2 text-white/80" data-swipe-ignore="true">
+                Score <span className="font-mono text-white/60">{score}</span>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-                <span className="rounded-full border border-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-white/70">
-                  Streak ×{streak}
-                </span>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-white/70">
-                  Stage {Math.max(1, streak + 1)}
-                </span>
+              <div className="rounded-full border border-white/5 px-4 py-2 text-white/60" data-swipe-ignore="true">
+                Best <span className="font-mono text-white">{highScore}</span>
               </div>
             </div>
           </div>
@@ -736,6 +723,18 @@ export default function DrawingMatchGame() {
               {status === "preview" && (
                 <div className="pointer-events-none absolute right-5 top-5 z-20 rounded-full bg-slate-950/70 px-3 py-1 text-[0.65rem] uppercase tracking-[0.35em] text-white/80">
                   {previewCountdownLabel}s
+                </div>
+              )}
+              {status === "intro" && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 rounded-[2.5rem] border border-white/10 bg-slate-950/85 px-8 text-center text-sm text-white/80 backdrop-blur">
+                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Trace the flash when it appears</p>
+                  <button
+                    type="button"
+                    onClick={beginGame}
+                    className="rounded-full border border-white/20 bg-white/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white shadow-[0_12px_40px_rgba(56,189,248,0.25)] transition hover:border-white/40 hover:bg-white/20"
+                  >
+                    Start session
+                  </button>
                 </div>
               )}
               {status === "over" && failureReason && (
@@ -777,21 +776,6 @@ export default function DrawingMatchGame() {
             </div>
           </div>
 
-          {status === "intro" && (
-            <div className="flex flex-col items-center gap-4 text-center text-sm text-white/70 sm:text-base">
-              <p>
-                Study each flash, then recreate it from memory. Keep accuracy high to build a streak and unlock tougher colors.
-              </p>
-              <button
-                type="button"
-                onClick={beginGame}
-                className="rounded-full border border-white/20 bg-white/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white shadow-[0_12px_40px_rgba(56,189,248,0.25)] transition hover:border-white/40 hover:bg-white/20"
-              >
-                Start session
-              </button>
-            </div>
-          )}
-
           {status === "over" && (
             <div className="flex flex-col items-center gap-5 text-center text-sm text-white/70 sm:text-base">
               {!failureReason && (
@@ -809,15 +793,6 @@ export default function DrawingMatchGame() {
             </div>
           )}
         </section>
-
-        <footer className="flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-6 text-xs uppercase tracking-[0.3em] text-white/50 sm:flex-row">
-          <Link href="/" className="rounded-full border border-white/10 px-4 py-2 text-white/70 transition hover:border-white/30 hover:text-white">
-            Back to hub
-          </Link>
-          <div className="text-center sm:text-right">
-            <p>Memorize the flash · Drawing must cover 55%+ of the shape · Overdraw hurts your score</p>
-          </div>
-        </footer>
       </main>
     </div>
   );
