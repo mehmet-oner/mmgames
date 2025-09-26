@@ -9,31 +9,40 @@ type Point = { x: number; y: number };
 type Target = {
   id: string;
   position: Point;
+  basePosition: Point;
   size: number;
   emoji: string;
   hit: boolean;
+  motion?: {
+    axis: "x" | "y";
+    amplitude: number;
+    speed: number;
+    phase: number;
+  };
 };
 
-type GameStatus = "ready" | "aiming" | "flying" | "cooldown";
+type Obstacle = {
+  id: string;
+  position: Point;
+  width: number;
+  height: number;
+};
+
+type GameStatus = "ready" | "aiming" | "flying" | "cooldown" | "failed";
 
 const CANVAS_WIDTH = 360;
 const CANVAS_HEIGHT = 320;
 const GROUND_Y = CANVAS_HEIGHT - 34;
 const SLING_ANCHOR: Point = { x: 90, y: GROUND_Y - 40 };
-const MAX_PULL = 96;
+const MAX_PULL = 115;
 const PROJECTILE_RADIUS = 22;
 const GRAVITY = 2000; // px/s^2
 const VELOCITY_MULTIPLIER = 9.2;
 const TRAJECTORY_STEPS = 64;
 const TRAJECTORY_INTERVAL = 1 / 55; // seconds per simulated step
 const TARGET_SIZE = 48;
-
-const TARGET_LAYOUT: Array<{ offsetX: number; offsetY: number }> = [
-  { offsetX: 180, offsetY: 0 },
-  { offsetX: 180 + TARGET_SIZE + 14, offsetY: 0 },
-  { offsetX: 180 + TARGET_SIZE / 2 + 8, offsetY: -(TARGET_SIZE + 14) },
-  { offsetX: 180 + TARGET_SIZE * 1.5 + 22, offsetY: -(TARGET_SIZE + 14) },
-];
+const MAX_TARGETS = 3;
+const SHOTS_PER_ROUND = 2;
 
 const TARGET_EMOJIS = ["😈", "🤖", "👾", "🥵", "💥", "👹"];
 
@@ -58,21 +67,158 @@ const withinAnchorZone = (point: Point) => {
   return distance <= PROJECTILE_RADIUS * 2.2;
 };
 
-const buildTargets = (level: number): Target[] => {
-  const count = Math.min(3, Math.max(1, level + 1));
-  const baseY = GROUND_Y - TARGET_SIZE - 6;
-  const targets: Target[] = [];
-  for (let index = 0; index < count; index += 1) {
-    const layout = TARGET_LAYOUT[index % TARGET_LAYOUT.length];
-    const shift = Math.floor(index / TARGET_LAYOUT.length) * (TARGET_SIZE + 12);
-    targets.push({
-      id: `target-${level}-${index}-${Math.random().toString(36).slice(2, 7)}`,
-      position: { x: SLING_ANCHOR.x + layout.offsetX + shift, y: baseY + layout.offsetY },
-      size: TARGET_SIZE,
-      emoji: pickEmoji(),
-      hit: false,
-    });
+const buildObstacle = (level: number): Obstacle | null => {
+  if (level < 2) {
+    return null;
   }
+
+  const minHeight = 70;
+  const maxHeight = 150;
+  const levelBoost = Math.min(maxHeight - minHeight, level * 20);
+  const rawHeight = minHeight + levelBoost * (0.6 + Math.random() * 0.4);
+  const height = Math.max(minHeight, Math.min(maxHeight, rawHeight));
+  const width = 16;
+
+  const minX = SLING_ANCHOR.x + 110;
+  const maxX = CANVAS_WIDTH - width - 110;
+  const positionX = maxX > minX ? minX + Math.random() * (maxX - minX) : minX;
+
+  const maxHover = 120;
+  const hoverOffset = Math.random() * maxHover;
+  const positionY = Math.max(50, GROUND_Y - height - hoverOffset);
+
+  return {
+    id: `pillar-${level}-${Math.random().toString(36).slice(2, 6)}`,
+    position: { x: positionX, y: positionY },
+    width,
+    height,
+  };
+};
+
+const buildTargets = (level: number, obstacle: Obstacle | null): Target[] => {
+  const count = Math.min(MAX_TARGETS, Math.max(2, Math.min(level + 1, SHOTS_PER_ROUND * 2)));
+  const targets: Target[] = [];
+  const minX = SLING_ANCHOR.x + 70;
+  const maxX = CANVAS_WIDTH - TARGET_SIZE - 12;
+  const groundY = GROUND_Y - TARGET_SIZE - 6;
+  const verticalRange = Math.min(140, 60 + level * 20);
+  const minY = Math.max(45, groundY - verticalRange);
+
+  const overlapsExisting = (x: number, y: number) => {
+    return targets.some((target) => {
+      const dx = target.position.x - x;
+      const dy = target.position.y - y;
+      return Math.abs(dx) < TARGET_SIZE + 12 && Math.abs(dy) < TARGET_SIZE + 12;
+    });
+  };
+
+  const intersectsObstacle = (x: number, y: number) => {
+    if (!obstacle) {
+      return false;
+    }
+    const horizontalOverlap = x + TARGET_SIZE > obstacle.position.x - 10 && x < obstacle.position.x + obstacle.width + 10;
+    if (!horizontalOverlap) {
+      return false;
+    }
+    return y + TARGET_SIZE > obstacle.position.y - 10;
+  };
+
+  for (let index = 0; index < count; index += 1) {
+    let placed = false;
+    for (let attempt = 0; attempt < 36 && !placed; attempt += 1) {
+      const spanX = Math.max(10, maxX - minX);
+      const randomX = minX + Math.random() * spanX;
+      const clampedX = Math.min(maxX, Math.max(minX, randomX));
+      const randomY = groundY - Math.random() * verticalRange;
+      const clampedY = Math.min(groundY, Math.max(minY, randomY));
+
+      if (overlapsExisting(clampedX, clampedY)) {
+        continue;
+      }
+      if (intersectsObstacle(clampedX, clampedY)) {
+        continue;
+      }
+
+      const basePosition = { x: clampedX, y: clampedY };
+      const target: Target = {
+        id: `target-${level}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+        position: { ...basePosition },
+        basePosition,
+        size: TARGET_SIZE,
+        emoji: pickEmoji(),
+        hit: false,
+      };
+      targets.push(target);
+      placed = true;
+    }
+
+    if (!placed) {
+      let fallbackX = Math.min(maxX, minX + index * (TARGET_SIZE + 18));
+      if (obstacle) {
+        const horizontalOverlap =
+          fallbackX + TARGET_SIZE > obstacle.position.x - 10 && fallbackX < obstacle.position.x + obstacle.width + 10;
+        if (horizontalOverlap) {
+          fallbackX = obstacle.position.x - TARGET_SIZE - 16;
+        }
+      }
+      fallbackX = Math.min(maxX, Math.max(minX, fallbackX));
+
+      let fallbackY = groundY - Math.floor(index / 2) * (TARGET_SIZE + 18);
+      if (obstacle && fallbackY + TARGET_SIZE > obstacle.position.y - 10) {
+        fallbackY = obstacle.position.y - TARGET_SIZE - 12;
+      }
+      fallbackY = Math.min(groundY, Math.max(minY, fallbackY));
+
+      const basePosition = { x: fallbackX, y: fallbackY };
+      const target: Target = {
+        id: `target-${level}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+        position: { ...basePosition },
+        basePosition,
+        size: TARGET_SIZE,
+        emoji: pickEmoji(),
+        hit: false,
+      };
+      targets.push(target);
+    }
+  }
+
+  if (level >= 2 && targets.length > 0) {
+    const movingIndex = (level + targets.length) % targets.length;
+    const movingTarget = targets[movingIndex];
+    const horizontalRoomLeft = movingTarget.basePosition.x - minX;
+    const horizontalRoomRight = maxX - movingTarget.basePosition.x;
+    const verticalRoomUp = movingTarget.basePosition.y - minY;
+    const verticalRoomDown = groundY - movingTarget.basePosition.y;
+
+    const horizontalRoom = Math.min(horizontalRoomLeft, horizontalRoomRight);
+    const verticalRoom = Math.min(verticalRoomUp, verticalRoomDown);
+
+    const amplitudeForAxis = (axis: "x" | "y") => {
+      if (axis === "x") {
+        return Math.min(24, horizontalRoom);
+      }
+      return Math.min(20, verticalRoom);
+    };
+
+    let axis: "x" | "y" = Math.random() < 0.5 ? "x" : "y";
+    if (amplitudeForAxis(axis) < 6) {
+      axis = axis === "x" ? "y" : "x";
+    }
+
+    const amplitude = amplitudeForAxis(axis);
+    if (amplitude >= 6) {
+      movingTarget.motion = {
+        axis,
+        amplitude,
+        speed: 0.8 + Math.random() * 0.6,
+        phase: Math.random() * Math.PI * 2,
+      };
+    } else {
+      delete movingTarget.motion;
+      movingTarget.position = { ...movingTarget.basePosition };
+    }
+  }
+
   return targets;
 };
 
@@ -102,6 +248,14 @@ const simulateTrajectory = (start: Point, velocity: Point) => {
   return points;
 };
 
+const circleRectIntersect = (center: Point, radius: number, obstacle: Obstacle) => {
+  const closestX = Math.max(obstacle.position.x, Math.min(center.x, obstacle.position.x + obstacle.width));
+  const closestY = Math.max(obstacle.position.y, Math.min(center.y, obstacle.position.y + obstacle.height));
+  const dx = center.x - closestX;
+  const dy = center.y - closestY;
+  return dx * dx + dy * dy <= radius * radius;
+};
+
 export default function AngrymojiGame() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -115,8 +269,11 @@ export default function AngrymojiGame() {
   const [level, setLevel] = useState(1);
   const [targetsRemaining, setTargetsRemaining] = useState(0);
   const [statusMessage, setStatusMessage] = useState("Drag and release to launch the 😡");
+  const [shotsLeft, setShotsLeft] = useState(SHOTS_PER_ROUND);
 
+  const shotsLeftRef = useRef(SHOTS_PER_ROUND);
   const targetsRef = useRef<Target[]>([]);
+  const obstaclesRef = useRef<Obstacle[]>([]);
   const projectileRef = useRef({
     position: { ...SLING_ANCHOR },
     velocity: { x: 0, y: 0 },
@@ -147,10 +304,14 @@ export default function AngrymojiGame() {
   const setupLevel = useCallback(
     (nextLevel: number) => {
       clearAllTimeouts();
-      const newTargets = buildTargets(nextLevel);
+      const obstacle = buildObstacle(nextLevel);
+      const newTargets = buildTargets(nextLevel, obstacle);
       targetsRef.current = newTargets;
+      obstaclesRef.current = obstacle ? [obstacle] : [];
       setTargetsRemaining(newTargets.length);
       setLevel(nextLevel);
+      setShotsLeft(SHOTS_PER_ROUND);
+      shotsLeftRef.current = SHOTS_PER_ROUND;
       resetProjectile();
       dragPointRef.current = null;
       draggingRef.current = false;
@@ -159,8 +320,23 @@ export default function AngrymojiGame() {
       lastTimestampRef.current = null;
       setStatusMessage(nextLevel === 1 ? "Drag and release to launch the 😡" : `Level ${nextLevel} · Stack those hits`);
     },
-    [clearAllTimeouts, resetProjectile],
+    [clearAllTimeouts, resetProjectile, setShotsLeft],
   );
+
+  const triggerFailure = useCallback(() => {
+    if (statusRef.current === "failed") {
+      return;
+    }
+    clearAllTimeouts();
+    resetProjectile();
+    shotsLeftRef.current = 0;
+    setShotsLeft(0);
+    statusRef.current = "failed";
+    setStatusMessage("Out of slings! Resetting…");
+    scheduleTimeout(() => {
+      setupLevel(1);
+    }, 900);
+  }, [clearAllTimeouts, resetProjectile, scheduleTimeout, setShotsLeft, setupLevel]);
 
   useEffect(() => {
     setupLevel(1);
@@ -232,15 +408,35 @@ export default function AngrymojiGame() {
         ctx.restore();
       }
 
+      // obstacles
+      obstaclesRef.current.forEach((obstacle) => {
+        ctx.save();
+        ctx.fillStyle = "rgba(249,115,22,0.55)";
+        ctx.strokeStyle = "rgba(251,191,36,0.9)";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "rgba(249,115,22,0.45)";
+        ctx.shadowBlur = 18;
+        ctx.fillRect(obstacle.position.x, obstacle.position.y, obstacle.width, obstacle.height);
+        ctx.strokeRect(obstacle.position.x, obstacle.position.y, obstacle.width, obstacle.height);
+        ctx.restore();
+      });
+
       // targets
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.font = "38px \"Apple Color Emoji\", \"Segoe UI Emoji\", sans-serif";
       targetsRef.current.forEach((target) => {
         const { position, size, hit, emoji } = target;
+        if (hit) {
+          return;
+        }
         ctx.save();
-        ctx.globalAlpha = hit ? 0.25 : 1;
-        ctx.font = "52px \"Apple Color Emoji\", \"Segoe UI Emoji\", sans-serif";
+        ctx.shadowColor = "rgba(251,191,36,0.75)";
+        ctx.shadowBlur = 28;
+        ctx.strokeStyle = "rgba(15,23,42,0.85)";
+        ctx.lineWidth = 3;
+        ctx.font = "60px \"Apple Color Emoji\", \"Segoe UI Emoji\", sans-serif";
+        ctx.strokeText(emoji, position.x + size / 2, position.y + size / 2);
         ctx.fillText(emoji, position.x + size / 2, position.y + size / 2);
         ctx.restore();
       });
@@ -278,40 +474,72 @@ export default function AngrymojiGame() {
 
       const projectile = projectileRef.current;
       const targets = targetsRef.current;
+      const timeSeconds = timestamp / 1000;
+
+      targets.forEach((target) => {
+        if (target.motion && !target.hit) {
+          const { axis, amplitude, speed, phase } = target.motion;
+          const offset = Math.sin(timeSeconds * speed + phase) * amplitude;
+          if (axis === "x") {
+            target.position.x = target.basePosition.x + offset;
+            target.position.y = target.basePosition.y;
+          } else {
+            const minY = Math.max(45, GROUND_Y - TARGET_SIZE - 140);
+            const maxY = GROUND_Y - TARGET_SIZE - 6;
+            target.position.x = target.basePosition.x;
+            target.position.y = Math.min(maxY, Math.max(minY, target.basePosition.y + offset));
+          }
+        } else {
+          target.position.x = target.basePosition.x;
+          target.position.y = target.basePosition.y;
+        }
+      });
+
+      let endReason: "ground" | "bounds" | null = null;
 
       if (projectile.active) {
         projectile.velocity.y += GRAVITY * delta;
         projectile.position.x += projectile.velocity.x * delta;
         projectile.position.y += projectile.velocity.y * delta;
 
-        // ground collision
+        obstaclesRef.current.forEach((obstacle) => {
+          if (!projectile.active) {
+            return;
+          }
+          if (circleRectIntersect(projectile.position, PROJECTILE_RADIUS, obstacle)) {
+            const obstacleCenterX = obstacle.position.x + obstacle.width / 2;
+            const obstacleCenterY = obstacle.position.y + obstacle.height / 2;
+            const dx = projectile.position.x - obstacleCenterX;
+            const dy = projectile.position.y - obstacleCenterY;
+            if (Math.abs(dx) > Math.abs(dy)) {
+              projectile.velocity.x *= -0.55;
+              projectile.position.x = dx > 0
+                ? obstacle.position.x + obstacle.width + PROJECTILE_RADIUS
+                : obstacle.position.x - PROJECTILE_RADIUS;
+            } else {
+              projectile.velocity.y *= -0.55;
+              projectile.position.y = dy > 0
+                ? obstacle.position.y + obstacle.height + PROJECTILE_RADIUS
+                : obstacle.position.y - PROJECTILE_RADIUS;
+            }
+          }
+        });
+
         if (projectile.position.y > GROUND_Y - PROJECTILE_RADIUS) {
           projectile.position.y = GROUND_Y - PROJECTILE_RADIUS;
           projectile.velocity.y *= -0.25;
           projectile.velocity.x *= 0.6;
           if (Math.abs(projectile.velocity.y) < 40) {
             projectile.active = false;
-            statusRef.current = "cooldown";
-            scheduleTimeout(() => {
-              resetProjectile();
-              statusRef.current = "ready";
-              setStatusMessage("Line up the next shot");
-            }, 600);
+            endReason = "ground";
           }
         }
 
-        // bounds check
         if (projectile.position.x > CANVAS_WIDTH + 80 || projectile.position.x < -80 || projectile.position.y < -120) {
           projectile.active = false;
-          statusRef.current = "cooldown";
-          scheduleTimeout(() => {
-            resetProjectile();
-            statusRef.current = "ready";
-            setStatusMessage("Try another angle");
-          }, 450);
+          endReason = "bounds";
         }
 
-        // target collision detection
         targets.forEach((target) => {
           if (target.hit) {
             return;
@@ -326,24 +554,36 @@ export default function AngrymojiGame() {
             setStatusMessage("Direct hit! 😤");
           }
         });
+      }
 
-        const remaining = targets.filter((target) => !target.hit).length;
-        if (remaining === 0 && targets.length > 0 && statusRef.current !== "cooldown") {
+      const remaining = targets.filter((target) => !target.hit).length;
+      if (remaining === 0 && targets.length > 0 && statusRef.current !== "cooldown") {
+        statusRef.current = "cooldown";
+        setStatusMessage("Rage streak! Next wave");
+        projectile.active = false;
+        scheduleTimeout(() => {
+          resetProjectile();
+          statusRef.current = "ready";
+          setupLevel(level + 1);
+        }, 800);
+      } else if (!projectile.active && endReason && remaining > 0) {
+        if (shotsLeftRef.current <= 0) {
+          triggerFailure();
+        } else if (statusRef.current !== "cooldown" && statusRef.current !== "failed") {
           statusRef.current = "cooldown";
-          setStatusMessage("Rage streak! Next wave");
-          projectile.active = false;
+          const delay = endReason === "ground" ? 600 : 450;
           scheduleTimeout(() => {
             resetProjectile();
             statusRef.current = "ready";
-            setupLevel(level + 1);
-          }, 800);
+            setStatusMessage(endReason === "ground" ? "Line up the next shot" : "Try another angle");
+          }, delay);
         }
       }
 
       drawScene(ctx);
       animationRef.current = requestAnimationFrame(animationStep);
     },
-    [drawScene, level, resetProjectile, scheduleTimeout, setupLevel],
+    [drawScene, level, resetProjectile, scheduleTimeout, setupLevel, triggerFailure],
   );
 
   useEffect(() => {
@@ -400,6 +640,10 @@ export default function AngrymojiGame() {
       if (!withinAnchorZone(point)) {
         return;
       }
+      if (shotsLeftRef.current <= 0) {
+        setStatusMessage("No slings left!");
+        return;
+      }
       event.preventDefault();
       const canvas = canvasRef.current;
       canvas?.setPointerCapture(event.pointerId);
@@ -449,6 +693,12 @@ export default function AngrymojiGame() {
         return;
       }
 
+      setShotsLeft((current) => {
+        const next = Math.max(0, current - 1);
+        shotsLeftRef.current = next;
+        return next;
+      });
+
       const velocity = computeVelocityFromPull(pullPoint);
       projectileRef.current.position = { ...SLING_ANCHOR };
       projectileRef.current.velocity = velocity;
@@ -475,8 +725,20 @@ export default function AngrymojiGame() {
     return `${targetsRemaining} target${targetsRemaining === 1 ? "" : "s"} left`;
   }, [targetsRemaining]);
 
+  const shotsLabel = useMemo(() => {
+    if (shotsLeft === 0) {
+      return "No shots remaining";
+    }
+    if (shotsLeft === 1) {
+      return "1 shot remaining";
+    }
+    return `${shotsLeft} shots remaining`;
+  }, [shotsLeft]);
+
   const resetGame = () => {
     clearAllTimeouts();
+    shotsLeftRef.current = SHOTS_PER_ROUND;
+    setShotsLeft(SHOTS_PER_ROUND);
     setScore(0);
     setupLevel(1);
     statusRef.current = "ready";
@@ -508,7 +770,7 @@ export default function AngrymojiGame() {
         <span className="text-xs uppercase tracking-[0.35em] text-muted/70">Saturday</span>
         <h1 className="text-4xl font-semibold text-white sm:text-5xl">Angrymoji</h1>
         <p className="max-w-2xl text-sm text-muted sm:text-base">
-          Pull back the rage sling and launch the 😡 emoji.
+          Pull back the rage sling, dodge blockers, and clear every emoji squad with just two shots.
         </p>
       </header>
 
@@ -524,6 +786,7 @@ export default function AngrymojiGame() {
         <div className="flex flex-col items-center gap-2 text-center text-xs uppercase tracking-[0.35em] text-muted/60">
           <span>{statusMessage}</span>
           <span>{remainingLabel}</span>
+          <span>{shotsLabel}</span>
         </div>
       </div>
 
