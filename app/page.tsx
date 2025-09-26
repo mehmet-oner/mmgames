@@ -28,8 +28,8 @@ const DAYS = [
   {
     id: "friday",
     name: "Friday",
-    game: "Lumen Pulse",
-    vibe: "A luminous co-op sprint into the weekend.",
+    game: "Simon Colors",
+    vibe: "Memorize glowing sequences in a classic weekend warmup.",
   },
   {
     id: "saturday",
@@ -46,7 +46,6 @@ const DAYS = [
 ];
 
 const getTodayIndex = () => {
-  // return 6;
   const today = new Date();
   return (today.getDay() + 6) % 7; // shift so Monday = 0 ... Sunday = 6
 };
@@ -90,7 +89,7 @@ export default function Home() {
           {DAYS.map((day, index) => {
             const isToday = index === todayIndex;
             const isUnlocked = index <= todayIndex;
-            const hasRoute = ["monday", "tuesday", "wednesday", "thursday"].includes(day.id);
+            const hasRoute = ["monday", "tuesday", "wednesday", "thursday", "friday"].includes(day.id);
             const isPlayable = hasRoute && isUnlocked;
 
             const isBeforeToday = index < todayIndex;
