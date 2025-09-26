@@ -233,7 +233,7 @@ const computeVelocityFromPull = (pullPoint: Point) => {
 const simulateTrajectory = (start: Point, velocity: Point) => {
   const points: Point[] = [];
   let position = { ...start };
-  let currentVelocity = { ...velocity };
+  const currentVelocity = { ...velocity };
   for (let step = 0; step < TRAJECTORY_STEPS; step += 1) {
     currentVelocity.y += GRAVITY * TRAJECTORY_INTERVAL;
     position = {

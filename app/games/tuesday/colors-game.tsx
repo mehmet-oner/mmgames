@@ -547,6 +547,9 @@ export default function ColorsGame() {
               <div className="rounded-full border border-white/5 px-4 py-2 text-white/60" data-swipe-ignore="true">
                 Best <span className="font-mono text-white">{highScore}</span>
               </div>
+              <div className="rounded-full border border-white/5 px-4 py-2 text-white/60" data-swipe-ignore="true">
+                Combo <span className="font-mono text-white">×{combo}</span>
+              </div>
             </div>
           </div>
 

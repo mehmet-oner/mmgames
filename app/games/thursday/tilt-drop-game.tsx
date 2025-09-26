@@ -724,18 +724,6 @@ export default function TiltDropGame() {
     return ghost;
   }, [activePiece, board]);
 
-  const nextPreview = useMemo(() => {
-    const grid = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => null as Cell));
-    const rotation = nextPiece.rotations[0];
-    rotation.forEach((offset) => {
-      const x = offset.x;
-      const y = offset.y;
-      if (y >= 0 && y < 4 && x >= 0 && x < 4) {
-        grid[y][x] = { color: nextPiece.color, glow: nextPiece.glow };
-      }
-    });
-    return grid;
-  }, [nextPiece]);
 
   return (
     <div className="min-h-screen overflow-hidden bg-slate-950/90 text-white">
