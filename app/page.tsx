@@ -34,8 +34,8 @@ const DAYS = [
   {
     id: "saturday",
     name: "Saturday",
-    game: "Arcade Bloom",
-    vibe: "Dynamic playground with experimental modes.",
+    game: "Angrymoji",
+    vibe: "Embrace the weekend rage in a charged emoji arena.",
   },
   {
     id: "sunday",
@@ -46,8 +46,9 @@ const DAYS = [
 ];
 
 const getTodayIndex = () => {
-  const today = new Date();
-  return (today.getDay() + 6) % 7; // shift so Monday = 0 ... Sunday = 6
+  return 5;
+//  const today = new Date();
+//  return (today.getDay() + 6) % 7; // shift so Monday = 0 ... Sunday = 6
 };
 
 export default function Home() {
@@ -89,7 +90,7 @@ export default function Home() {
           {DAYS.map((day, index) => {
             const isToday = index === todayIndex;
             const isUnlocked = index <= todayIndex;
-            const hasRoute = ["monday", "tuesday", "wednesday", "thursday", "friday"].includes(day.id);
+            const hasRoute = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"].includes(day.id);
             const isPlayable = hasRoute && isUnlocked;
 
             const isBeforeToday = index < todayIndex;
