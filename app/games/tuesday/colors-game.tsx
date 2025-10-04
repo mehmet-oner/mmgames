@@ -48,6 +48,8 @@ const COLOR_LIBRARY: ColorSlice[] = [
 
 const BASE_SCORE = 120;
 const SCORE_MULTIPLIER_STEP = 0.25;
+const ROTATIONS_BEFORE_FAIL = 2;
+const DEGREES_PER_ROTATION = 360;
 
 const normalizeAngle = (angle: number) => {
   const mod = angle % 360;
@@ -77,7 +79,7 @@ const pickSegments = (count: number): Segment[] => {
 
 const buildInstruction = (_action: ChallengeAction, fake: boolean) => {
   if (fake) {
-    return "Fake signal · stay cool";
+    return "Fake signal · stay calm";
   }
 
   return "Tap the matching hue";
@@ -116,6 +118,8 @@ export default function ColorsGame() {
   const [failureReason, setFailureReason] = useState<string | null>(null);
 
   const rotationRef = useRef(rotation);
+  const rotationProgressRef = useRef(0);
+  const rotationThresholdRef = useRef<number>(Infinity);
   const speedRef = useRef(speed);
   const directionRef = useRef(direction);
   const statusRef = useRef<GameStatus>(status);
@@ -217,11 +221,12 @@ export default function ColorsGame() {
         targetColor = picked.color;
       }
 
-      const rawSpeed = 90 + levelValue * 14 + segmentCount * 4;
-      const speedNext = Math.min(420, rawSpeed);
+      const speedNext = Math.min(420, 120 + levelValue * 18);
       const flipChance = Math.min(0.3 + levelValue * 0.02, 0.65);
       const directionNext: 1 | -1 = Math.random() < flipChance ? (previousDirection === 1 ? -1 : 1) : previousDirection;
-      const duration = Math.max(1100, fake ? 1800 : 2200 - levelValue * 70);
+      const baseDuration = Math.max(1100, fake ? 1800 : 2200 - levelValue * 70);
+      const rotationWindowMs = (ROTATIONS_BEFORE_FAIL * DEGREES_PER_ROTATION * 1000) / speedNext;
+      const duration = action === "tap" ? rotationWindowMs : baseDuration;
       const instruction = buildInstruction(action, fake);
       const challengeId = challengeIdRef.current + 1;
       challengeIdRef.current = challengeId;
@@ -239,6 +244,8 @@ export default function ColorsGame() {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
 
       challengeResolvedRef.current = false;
+      rotationProgressRef.current = 0;
+      rotationThresholdRef.current = action === "tap" ? ROTATIONS_BEFORE_FAIL * DEGREES_PER_ROTATION : Number.POSITIVE_INFINITY;
       setSegments(segmentsNext);
       setChallenge(challengeNext);
       setRotation(() => {
@@ -320,6 +327,7 @@ export default function ColorsGame() {
       const delta = time - lastTime;
       lastTime = time;
       const deltaDegrees = (delta / 1000) * speedRef.current * directionRef.current;
+      rotationProgressRef.current += Math.abs(deltaDegrees);
       setRotation((previous) => {
         const next = previous + deltaDegrees;
         const normalized = normalizeAngle(next);
@@ -353,7 +361,7 @@ export default function ColorsGame() {
           resolveChallenge("success");
           return;
         }
-      } else if (now >= deadline) {
+      } else if (rotationProgressRef.current >= rotationThresholdRef.current) {
         resolveChallenge("failure", "Too slow");
         return;
       }
@@ -365,7 +373,7 @@ export default function ColorsGame() {
 
     const animation = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(animation);
-  }, [challenge, deadline, pointerSnapshot, resolveChallenge, status]);
+  }, [challenge, deadline, resolveChallenge, status]);
 
   const beginGame = useCallback(() => {
     setStatus("playing");
@@ -378,6 +386,8 @@ export default function ColorsGame() {
     setMaxCombo(0);
     setFeedback(null);
     setFailureReason(null);
+    rotationProgressRef.current = 0;
+    rotationThresholdRef.current = Number.POSITIVE_INFINITY;
     prepareRound(0);
   }, [prepareRound]);
 
@@ -575,7 +585,7 @@ export default function ColorsGame() {
                       boxShadow: `0 0 10px ${challenge?.targetColor.glow ?? "rgba(56,189,248,0.4)"}`,
                     }}
                   />
-                  <span>{challenge?.fake ? `${challenge?.targetColor.name}?` : challenge?.targetColor.name ?? "—"}</span>
+                  <span>{challenge?.fake ? "stay calm" : challenge?.targetColor.name ?? "—"}</span>
                 </span>
               </div>
               <div className="absolute inset-0 flex items-center justify-center">
