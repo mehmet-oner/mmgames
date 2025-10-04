@@ -264,6 +264,7 @@ export default function AngrymojiGame() {
   const trajectoryRef = useRef<Point[]>([]);
   const draggingRef = useRef(false);
   const statusRef = useRef<GameStatus>("ready");
+  const backgroundAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -341,6 +342,28 @@ export default function AngrymojiGame() {
   useEffect(() => {
     setupLevel(1);
   }, [setupLevel]);
+
+  useEffect(() => {
+    const audio = new Audio("/music1.mp3");
+    audio.loop = true;
+    audio.volume = 0.35;
+    backgroundAudioRef.current = audio;
+
+    const attemptPlay = audio.play();
+    if (attemptPlay) {
+      attemptPlay.catch(() => {
+        // Autoplay can be blocked until user interaction; retry on pointer input.
+      });
+    }
+
+    return () => {
+      if (backgroundAudioRef.current) {
+        backgroundAudioRef.current.pause();
+        backgroundAudioRef.current.currentTime = 0;
+        backgroundAudioRef.current = null;
+      }
+    };
+  }, []);
 
   const cleanupAnimation = useCallback(() => {
     if (animationRef.current !== null) {
@@ -643,6 +666,12 @@ export default function AngrymojiGame() {
       if (shotsLeftRef.current <= 0) {
         setStatusMessage("No slings left!");
         return;
+      }
+      const audio = backgroundAudioRef.current;
+      if (audio && audio.paused) {
+        void audio.play().catch(() => {
+          // Allow graceful failure if the browser still blocks playback.
+        });
       }
       event.preventDefault();
       const canvas = canvasRef.current;
